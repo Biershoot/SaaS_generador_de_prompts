@@ -13,6 +13,9 @@ public class CreatePromptRequest {
     @Size(max = 10000, message = "Content must be less than 10000 characters")
     private String content;
     
+    @Size(max = 50, message = "Category must be less than 50 characters")
+    private String category;
+    
     // Constructors
     public CreatePromptRequest() {}
     
@@ -36,5 +39,13 @@ public class CreatePromptRequest {
     
     public void setContent(String content) {
         this.content = content;
+    }
+    
+    public String getCategory() {
+        return category;
+    }
+    
+    public void setCategory(String category) {
+        this.category = category;
     }
 }

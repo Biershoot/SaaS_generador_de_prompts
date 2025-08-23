@@ -21,6 +21,9 @@ public class Prompt {
     @Column(columnDefinition = "TEXT", nullable = false)
     private String content;
     
+    @Column(length = 50)
+    private String category;
+    
     @Column(name = "created_at")
     private LocalDateTime createdAt;
     
@@ -29,10 +32,11 @@ public class Prompt {
         this.createdAt = LocalDateTime.now();
     }
     
-    public Prompt(String title, String content, User user) {
+    public Prompt(String title, String content, String category, User user) {
         this();
         this.title = title;
         this.content = content;
+        this.category = category;
         this.user = user;
     }
     
@@ -67,6 +71,14 @@ public class Prompt {
     
     public void setContent(String content) {
         this.content = content;
+    }
+    
+    public String getCategory() {
+        return category;
+    }
+    
+    public void setCategory(String category) {
+        this.category = category;
     }
     
     public LocalDateTime getCreatedAt() {

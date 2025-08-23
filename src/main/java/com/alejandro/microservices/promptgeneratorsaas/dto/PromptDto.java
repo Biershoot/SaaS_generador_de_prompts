@@ -7,6 +7,7 @@ public class PromptDto {
     private Long id;
     private String title;
     private String content;
+    private String category;
     private Long userId;
     private String username;
     private LocalDateTime createdAt;
@@ -14,9 +15,10 @@ public class PromptDto {
     // Constructors
     public PromptDto() {}
     
-    public PromptDto(String title, String content, Long userId) {
+    public PromptDto(String title, String content, String category, Long userId) {
         this.title = title;
         this.content = content;
+        this.category = category;
         this.userId = userId;
     }
     
@@ -43,6 +45,14 @@ public class PromptDto {
     
     public void setContent(String content) {
         this.content = content;
+    }
+    
+    public String getCategory() {
+        return category;
+    }
+    
+    public void setCategory(String category) {
+        this.category = category;
     }
     
     public Long getUserId() {

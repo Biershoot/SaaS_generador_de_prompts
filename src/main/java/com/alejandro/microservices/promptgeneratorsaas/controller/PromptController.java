@@ -62,6 +62,21 @@ public class PromptController {
         return ResponseEntity.ok(prompts);
     }
     
+    @GetMapping("/category/{category}")
+    public ResponseEntity<List<PromptDto>> getPromptsByCategory(
+            @PathVariable String category) {
+        List<PromptDto> prompts = promptService.getPromptsByCategory(category);
+        return ResponseEntity.ok(prompts);
+    }
+    
+    @GetMapping("/user/{userId}/category/{category}")
+    public ResponseEntity<List<PromptDto>> getUserPromptsByCategory(
+            @PathVariable Long userId,
+            @PathVariable String category) {
+        List<PromptDto> prompts = promptService.getUserPromptsByCategory(userId, category);
+        return ResponseEntity.ok(prompts);
+    }
+    
     @PutMapping("/{id}")
     public ResponseEntity<PromptDto> updatePrompt(
             @PathVariable Long id,
