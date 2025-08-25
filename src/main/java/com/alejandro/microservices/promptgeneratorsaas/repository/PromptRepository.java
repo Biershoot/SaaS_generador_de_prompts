@@ -11,16 +11,13 @@ import java.util.List;
 
 @Repository
 public interface PromptRepository extends JpaRepository<Prompt, Long> {
-    
     List<Prompt> findByUser(User user);
+    List<Prompt> findByCategory(String category);
+    List<Prompt> findByUserAndCategory(User user, String category);
     
     @Query("SELECT p FROM Prompt p WHERE p.title LIKE %:searchTerm% OR p.content LIKE %:searchTerm%")
     List<Prompt> searchPrompts(@Param("searchTerm") String searchTerm);
     
     @Query("SELECT p FROM Prompt p WHERE p.user = :user AND (p.title LIKE %:searchTerm% OR p.content LIKE %:searchTerm%)")
     List<Prompt> searchUserPrompts(@Param("user") User user, @Param("searchTerm") String searchTerm);
-    
-    List<Prompt> findByCategory(String category);
-    
-    List<Prompt> findByUserAndCategory(User user, String category);
 }
