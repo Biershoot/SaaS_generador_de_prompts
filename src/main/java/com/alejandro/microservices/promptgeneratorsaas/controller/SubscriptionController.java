@@ -19,6 +19,27 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+/**
+ * REST Controller for managing subscription-related operations.
+ * 
+ * <p>This controller provides endpoints for:</p>
+ * <ul>
+ *   <li>Retrieving available subscription plans</li>
+ *   <li>Managing user subscriptions</li>
+ *   <li>Creating checkout sessions for payments</li>
+ *   <li>Handling subscription upgrades and cancellations</li>
+ *   <li>Validating subscription features and limits</li>
+ * </ul>
+ * 
+ * <p><strong>Security:</strong> All endpoints require authentication and appropriate
+ * user roles (USER or ADMIN). Users can only access their own subscription data.</p>
+ * 
+ * <p><strong>API Base Path:</strong> /api/subscriptions</p>
+ * 
+ * @author Alejandro
+ * @version 1.0
+ * @since 2024-01-01
+ */
 @RestController
 @RequestMapping("/api/subscriptions")
 @RequiredArgsConstructor
@@ -28,6 +49,22 @@ public class SubscriptionController {
     private final SubscriptionService subscriptionService;
     private final PaymentService paymentService;
 
+    /**
+     * Retrieves all available subscription plans.
+     * 
+     * <p>This endpoint returns a list of all subscription plans with their
+     * features, pricing, and limitations. The response includes:</p>
+     * <ul>
+     *   <li>Plan ID and display name</li>
+     *   <li>Description and pricing information</li>
+     *   <li>Prompt limits and feature flags</li>
+     *   <li>Stripe price IDs for payment processing</li>
+     * </ul>
+     * 
+     * <p><strong>Access:</strong> Requires USER or ADMIN role</p>
+     * 
+     * @return ResponseEntity containing list of subscription plans
+     */
     @GetMapping("/plans")
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     public ResponseEntity<List<SubscriptionPlan>> getAvailablePlans() {
@@ -41,6 +78,23 @@ public class SubscriptionController {
         }
     }
 
+    /**
+     * Retrieves the current subscription information for the authenticated user.
+     * 
+     * <p>This endpoint returns comprehensive information about the user's
+     * current subscription including:</p>
+     * <ul>
+     *   <li>Subscription details (plan, status, dates)</li>
+     *   <li>Current plan information</li>
+     *   <li>Feature access flags</li>
+     *   <li>Prompt limits and usage</li>
+     * </ul>
+     * 
+     * <p><strong>Access:</strong> Requires USER or ADMIN role</p>
+     * 
+     * @param authentication Spring Security authentication object
+     * @return ResponseEntity containing subscription information
+     */
     @GetMapping("/my-subscription")
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     public ResponseEntity<?> getMySubscription(Authentication authentication) {
@@ -70,6 +124,25 @@ public class SubscriptionController {
         }
     }
 
+    /**
+     * Creates a Stripe checkout session for a new subscription.
+     * 
+     * <p>This endpoint creates a checkout session that allows users to complete
+     * their subscription payment through Stripe's hosted checkout page.</p>
+     * 
+     * <p><strong>Request Body:</strong></p>
+     * <ul>
+     *   <li>priceId: Stripe price ID for the selected plan</li>
+     *   <li>successUrl: URL to redirect after successful payment</li>
+     *   <li>cancelUrl: URL to redirect if payment is cancelled</li>
+     * </ul>
+     * 
+     * <p><strong>Access:</strong> Requires USER or ADMIN role</p>
+     * 
+     * @param authentication Spring Security authentication object
+     * @param request Checkout session request with payment details
+     * @return ResponseEntity containing checkout session information
+     */
     @PostMapping("/create-checkout-session")
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     public ResponseEntity<CheckoutSessionResponse> createCheckoutSession(
@@ -99,6 +172,27 @@ public class SubscriptionController {
         }
     }
 
+    /**
+     * Creates a Stripe checkout session for upgrading an existing subscription.
+     * 
+     * <p>This endpoint creates a checkout session specifically for users who want
+     * to upgrade their current subscription to a higher tier plan.</p>
+     * 
+     * <p><strong>Query Parameters:</strong></p>
+     * <ul>
+     *   <li>newPriceId: Stripe price ID for the new plan</li>
+     *   <li>successUrl: URL to redirect after successful payment</li>
+     *   <li>cancelUrl: URL to redirect if payment is cancelled</li>
+     * </ul>
+     * 
+     * <p><strong>Access:</strong> Requires USER or ADMIN role</p>
+     * 
+     * @param authentication Spring Security authentication object
+     * @param newPriceId The Stripe price ID for the new plan
+     * @param successUrl URL to redirect after successful payment
+     * @param cancelUrl URL to redirect if payment is cancelled
+     * @return ResponseEntity containing upgrade session information
+     */
     @PostMapping("/upgrade")
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     public ResponseEntity<CheckoutSessionResponse> upgradeSubscription(
@@ -130,6 +224,17 @@ public class SubscriptionController {
         }
     }
 
+    /**
+     * Cancels the current subscription for the authenticated user.
+     * 
+     * <p>This endpoint cancels the user's subscription both locally and in Stripe.
+     * The user will maintain access until the end of their current billing period.</p>
+     * 
+     * <p><strong>Access:</strong> Requires USER or ADMIN role</p>
+     * 
+     * @param authentication Spring Security authentication object
+     * @return ResponseEntity with cancellation confirmation
+     */
     @PostMapping("/cancel")
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     public ResponseEntity<?> cancelSubscription(Authentication authentication) {
@@ -157,6 +262,23 @@ public class SubscriptionController {
         }
     }
 
+    /**
+     * Checks if the user can upgrade to a specific plan.
+     * 
+     * <p>This endpoint validates whether the user is eligible to upgrade to
+     * the specified plan based on their current subscription and upgrade hierarchy.</p>
+     * 
+     * <p><strong>Query Parameters:</strong></p>
+     * <ul>
+     *   <li>targetPlan: The plan to upgrade to (free, premium, pro)</li>
+     * </ul>
+     * 
+     * <p><strong>Access:</strong> Requires USER or ADMIN role</p>
+     * 
+     * @param authentication Spring Security authentication object
+     * @param targetPlan The plan to upgrade to
+     * @return ResponseEntity with upgrade eligibility information
+     */
     @GetMapping("/can-upgrade")
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     public ResponseEntity<?> canUpgrade(
@@ -184,6 +306,23 @@ public class SubscriptionController {
         }
     }
 
+    /**
+     * Checks if the user can downgrade to a specific plan.
+     * 
+     * <p>This endpoint validates whether the user is eligible to downgrade to
+     * the specified plan based on their current subscription and downgrade hierarchy.</p>
+     * 
+     * <p><strong>Query Parameters:</strong></p>
+     * <ul>
+     *   <li>targetPlan: The plan to downgrade to (free, premium, pro)</li>
+     * </ul>
+     * 
+     * <p><strong>Access:</strong> Requires USER or ADMIN role</p>
+     * 
+     * @param authentication Spring Security authentication object
+     * @param targetPlan The plan to downgrade to
+     * @return ResponseEntity with downgrade eligibility information
+     */
     @GetMapping("/can-downgrade")
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     public ResponseEntity<?> canDowngrade(
@@ -211,6 +350,17 @@ public class SubscriptionController {
         }
     }
 
+    /**
+     * Retrieves the subscription features available to the authenticated user.
+     * 
+     * <p>This endpoint returns information about the user's current subscription
+     * features including prompt limits, custom prompts access, and priority support.</p>
+     * 
+     * <p><strong>Access:</strong> Requires USER or ADMIN role</p>
+     * 
+     * @param authentication Spring Security authentication object
+     * @return ResponseEntity containing subscription features
+     */
     @GetMapping("/features")
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     public ResponseEntity<?> getSubscriptionFeatures(Authentication authentication) {
@@ -236,6 +386,23 @@ public class SubscriptionController {
         }
     }
 
+    /**
+     * Updates the user's subscription to a new plan.
+     * 
+     * <p>This endpoint updates the subscription in Stripe to use a new price/plan
+     * and updates the local subscription record accordingly.</p>
+     * 
+     * <p><strong>Query Parameters:</strong></p>
+     * <ul>
+     *   <li>newPriceId: The new Stripe price ID</li>
+     * </ul>
+     * 
+     * <p><strong>Access:</strong> Requires USER or ADMIN role</p>
+     * 
+     * @param authentication Spring Security authentication object
+     * @param newPriceId The new Stripe price ID
+     * @return ResponseEntity with update confirmation
+     */
     @PostMapping("/update")
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     public ResponseEntity<?> updateSubscription(
