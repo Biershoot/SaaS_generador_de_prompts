@@ -48,3 +48,9 @@ stable-diffusion:
     url: ${STABLE_DIFFUSION_API_URL:https://api.stability.ai}
     key: ${STABLE_DIFFUSION_API_KEY:}
   model: ${STABLE_DIFFUSION_MODEL:stable-diffusion-xl-1024-v1-0}
+
+# Stripe Configuration
+stripe:
+  secret-key: ${STRIPE_SECRET_KEY:sk_test_xxxxxxxxxxxxxxxxxxxxxx}
+  webhook-secret: ${STRIPE_WEBHOOK_SECRET:whsec_xxxxxxxxxxxxxxxxxxxxxx}
+  publishable-key: ${STRIPE_PUBLISHABLE_KEY:pk_test_xxxxxxxxxxxxxxxxxxxxxx}

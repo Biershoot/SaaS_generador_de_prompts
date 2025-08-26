@@ -125,6 +125,13 @@
             <artifactId>client</artifactId>
             <version>0.15.0</version>
         </dependency>
+        
+        <!-- Stripe Java SDK -->
+        <dependency>
+            <groupId>com.stripe</groupId>
+            <artifactId>stripe-java</artifactId>
+            <version>24.9.0</version>
+        </dependency>
     </dependencies>
 
     <build>
