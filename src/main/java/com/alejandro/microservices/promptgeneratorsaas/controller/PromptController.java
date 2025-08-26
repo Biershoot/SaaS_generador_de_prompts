@@ -1,97 +1,203 @@
 package com.alejandro.microservices.promptgeneratorsaas.controller;
 
-import com.alejandro.microservices.promptgeneratorsaas.dto.CreatePromptRequest;
-import com.alejandro.microservices.promptgeneratorsaas.dto.PromptDto;
-import com.alejandro.microservices.promptgeneratorsaas.service.PromptService;
-import jakarta.validation.Valid;
+import com.alejandro.microservices.promptgeneratorsaas.dto.AIGenerationRequest;
+import com.alejandro.microservices.promptgeneratorsaas.dto.AIGenerationResponse;
+import com.alejandro.microservices.promptgeneratorsaas.entity.Prompt;
+import com.alejandro.microservices.promptgeneratorsaas.entity.User;
+import com.alejandro.microservices.promptgeneratorsaas.repository.UserRepository;
+import com.alejandro.microservices.promptgeneratorsaas.service.PromptGenerationService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/prompts")
 @CrossOrigin(origins = "*")
 public class PromptController {
-    
-    @Autowired
-    private PromptService promptService;
-    
-    @PostMapping
-    public ResponseEntity<PromptDto> createPrompt(
-            @Valid @RequestBody CreatePromptRequest request,
-            @RequestHeader("X-User-ID") Long userId) {
-        PromptDto createdPrompt = promptService.createPrompt(request, userId);
-        return ResponseEntity.status(HttpStatus.CREATED).body(createdPrompt);
+
+    private final PromptGenerationService promptGenerationService;
+    private final UserRepository userRepository;
+
+    public PromptController(PromptGenerationService promptGenerationService, UserRepository userRepository) {
+        this.promptGenerationService = promptGenerationService;
+        this.userRepository = userRepository;
     }
-    
-    @GetMapping("/{id}")
-    public ResponseEntity<PromptDto> getPromptById(@PathVariable Long id) {
-        Optional<PromptDto> prompt = promptService.getPromptById(id);
-        return prompt.map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+
+    /**
+     * Genera un prompt usando IA
+     */
+    @PostMapping("/generate")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    public ResponseEntity<?> generatePrompt(@RequestBody AIGenerationRequest request) {
+        try {
+            User user = getCurrentUser();
+            AIGenerationResponse response = promptGenerationService.generatePrompt(
+                request.getProvider(), 
+                request.getPrompt(), 
+                request.getModel(), 
+                user
+            );
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+        }
     }
-    
-    @GetMapping("/user/{userId}")
-    public ResponseEntity<List<PromptDto>> getUserPrompts(@PathVariable Long userId) {
-        List<PromptDto> prompts = promptService.getUserPrompts(userId);
-        return ResponseEntity.ok(prompts);
+
+    /**
+     * Genera múltiples variaciones de un prompt
+     */
+    @PostMapping("/generate/variations")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    public ResponseEntity<?> generatePromptVariations(@RequestBody AIGenerationRequest request, 
+                                                    @RequestParam(defaultValue = "3") int variations) {
+        try {
+            User user = getCurrentUser();
+            List<AIGenerationResponse> responses = promptGenerationService.generatePromptVariations(
+                request.getProvider(), 
+                request.getPrompt(), 
+                request.getModel(), 
+                user, 
+                variations
+            );
+            return ResponseEntity.ok(responses);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+        }
     }
-    
-    @GetMapping
-    public ResponseEntity<List<PromptDto>> getAllPrompts() {
-        List<PromptDto> prompts = promptService.getAllPrompts();
-        return ResponseEntity.ok(prompts);
+
+    /**
+     * Genera un prompt optimizado para una categoría
+     */
+    @PostMapping("/generate/optimized")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    public ResponseEntity<?> generateOptimizedPrompt(@RequestBody AIGenerationRequest request, 
+                                                   @RequestParam String category) {
+        try {
+            User user = getCurrentUser();
+            AIGenerationResponse response = promptGenerationService.generateOptimizedPrompt(
+                request.getProvider(), 
+                request.getPrompt(), 
+                category, 
+                request.getModel(), 
+                user
+            );
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+        }
     }
-    
-    @GetMapping("/search")
-    public ResponseEntity<List<PromptDto>> searchPrompts(
-            @RequestParam String q) {
-        List<PromptDto> prompts = promptService.searchPrompts(q);
-        return ResponseEntity.ok(prompts);
+
+    /**
+     * Genera un prompt con parámetros específicos
+     */
+    @PostMapping("/generate/with-parameters")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    public ResponseEntity<?> generatePromptWithParameters(@RequestBody AIGenerationRequest request, 
+                                                        @RequestBody Map<String, Object> parameters) {
+        try {
+            User user = getCurrentUser();
+            AIGenerationResponse response = promptGenerationService.generatePromptWithParameters(
+                request.getProvider(), 
+                request.getPrompt(), 
+                parameters, 
+                request.getModel(), 
+                user
+            );
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+        }
     }
-    
-    @GetMapping("/user/{userId}/search")
-    public ResponseEntity<List<PromptDto>> searchUserPrompts(
-            @PathVariable Long userId,
-            @RequestParam String q) {
-        List<PromptDto> prompts = promptService.searchUserPrompts(userId, q);
-        return ResponseEntity.ok(prompts);
+
+    /**
+     * Obtiene el historial de prompts del usuario
+     */
+    @GetMapping("/history")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    public ResponseEntity<List<Prompt>> getUserPrompts() {
+        try {
+            User user = getCurrentUser();
+            List<Prompt> prompts = promptGenerationService.getUserGeneratedPrompts(user);
+            return ResponseEntity.ok(prompts);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
     }
-    
+
+    /**
+     * Obtiene prompts por categoría
+     */
     @GetMapping("/category/{category}")
-    public ResponseEntity<List<PromptDto>> getPromptsByCategory(
-            @PathVariable String category) {
-        List<PromptDto> prompts = promptService.getPromptsByCategory(category);
-        return ResponseEntity.ok(prompts);
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    public ResponseEntity<List<Prompt>> getPromptsByCategory(@PathVariable String category) {
+        try {
+            User user = getCurrentUser();
+            List<Prompt> prompts = promptGenerationService.getPromptsByCategory(user, category);
+            return ResponseEntity.ok(prompts);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
     }
-    
-    @GetMapping("/user/{userId}/category/{category}")
-    public ResponseEntity<List<PromptDto>> getUserPromptsByCategory(
-            @PathVariable Long userId,
-            @PathVariable String category) {
-        List<PromptDto> prompts = promptService.getUserPromptsByCategory(userId, category);
-        return ResponseEntity.ok(prompts);
+
+    /**
+     * Busca prompts en el historial del usuario
+     */
+    @GetMapping("/search")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    public ResponseEntity<List<Prompt>> searchPrompts(@RequestParam String query) {
+        try {
+            User user = getCurrentUser();
+            List<Prompt> prompts = promptGenerationService.searchUserPrompts(user, query);
+            return ResponseEntity.ok(prompts);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
     }
-    
-    @PutMapping("/{id}")
-    public ResponseEntity<PromptDto> updatePrompt(
-            @PathVariable Long id,
-            @Valid @RequestBody CreatePromptRequest request,
-            @RequestHeader("X-User-ID") Long userId) {
-        Optional<PromptDto> updatedPrompt = promptService.updatePrompt(id, request, userId);
-        return updatedPrompt.map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+
+    /**
+     * Verifica si un proveedor está disponible
+     */
+    @GetMapping("/providers/{providerName}/status")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    public ResponseEntity<?> checkProviderStatus(@PathVariable String providerName) {
+        try {
+            boolean isAvailable = promptGenerationService.isProviderAvailable(providerName);
+            return ResponseEntity.ok(Map.of(
+                "provider", providerName,
+                "available", isAvailable
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+        }
     }
-    
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deletePrompt(
-            @PathVariable Long id,
-            @RequestHeader("X-User-ID") Long userId) {
-        boolean deleted = promptService.deletePrompt(id, userId);
-        return deleted ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
+
+    /**
+     * Obtiene los modelos soportados por un proveedor
+     */
+    @GetMapping("/providers/{providerName}/models")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    public ResponseEntity<String[]> getProviderModels(@PathVariable String providerName) {
+        try {
+            String[] models = promptGenerationService.getProviderModels(providerName);
+            return ResponseEntity.ok(models);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * Obtiene el usuario actual autenticado
+     */
+    private User getCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = authentication.getName();
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
     }
 }

@@ -15,7 +15,8 @@ public class AIServiceFactory {
         this.providers = Map.of(
             "openai", aiServices.stream().filter(s -> s.getProviderName().equals("openai")).findFirst().orElse(null),
             "claude", aiServices.stream().filter(s -> s.getProviderName().equals("claude")).findFirst().orElse(null),
-            "mock", aiServices.stream().filter(s -> s.getProviderName().equals("mock")).findFirst().orElse(null)
+            "mock", aiServices.stream().filter(s -> s.getProviderName().equals("mock")).findFirst().orElse(null),
+            "stable-diffusion", aiServices.stream().filter(s -> s.getProviderName().equals("stable-diffusion")).findFirst().orElse(null)
         );
     }
 

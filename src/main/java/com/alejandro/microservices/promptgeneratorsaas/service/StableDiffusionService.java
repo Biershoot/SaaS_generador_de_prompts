@@ -11,22 +11,22 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 import java.util.Map;
 
 @Service
-public class ClaudeService implements AIProviderService {
+public class StableDiffusionService implements AIProviderService {
 
     private final WebClient webClient;
     private final ObjectMapper objectMapper;
     private final String defaultModel;
 
-    public ClaudeService(@Value("${claude.api.key:}") String apiKey,
-                        @Value("${claude.model:claude-3-opus-20240229}") String defaultModel) {
+    public StableDiffusionService(@Value("${stable-diffusion.api.url:https://api.stability.ai}") String apiUrl,
+                                 @Value("${stable-diffusion.api.key:}") String apiKey,
+                                 @Value("${stable-diffusion.model:stable-diffusion-xl-1024-v1-0}") String defaultModel) {
         this.defaultModel = defaultModel;
         this.objectMapper = new ObjectMapper();
         
         this.webClient = WebClient.builder()
-                .baseUrl("https://api.anthropic.com/v1")
-                .defaultHeader("x-api-key", apiKey)
+                .baseUrl(apiUrl)
+                .defaultHeader("Authorization", "Bearer " + apiKey)
                 .defaultHeader("Content-Type", "application/json")
-                .defaultHeader("anthropic-version", "2023-06-01")
                 .build();
     }
 
@@ -41,61 +41,41 @@ public class ClaudeService implements AIProviderService {
             String modelToUse = model != null ? model : defaultModel;
             
             Map<String, Object> requestBody = Map.of(
-                "model", modelToUse,
-                "max_tokens", 1000,
-                "messages", new Object[]{
-                    Map.of("role", "user", "content", prompt)
-                }
+                "text_prompts", new Object[]{
+                    Map.of("text", prompt, "weight", 1.0)
+                },
+                "cfg_scale", 7,
+                "height", 1024,
+                "width", 1024,
+                "samples", 1,
+                "steps", 30
             );
 
             String response = webClient.post()
-                    .uri("/messages")
+                    .uri("/v1/generation/" + modelToUse + "/text-to-image")
                     .bodyValue(requestBody)
                     .retrieve()
                     .bodyToMono(String.class)
                     .block();
 
-            // Parse the response to extract the content
+            // Parse the response to extract the image URL
             JsonNode jsonResponse = objectMapper.readTree(response);
-            return jsonResponse.path("content")
+            return jsonResponse.path("artifacts")
                     .path(0)
-                    .path("text")
+                    .path("base64")
                     .asText();
 
         } catch (WebClientResponseException e) {
-            throw new RuntimeException("Claude API error: " + e.getResponseBodyAsString(), e);
+            throw new RuntimeException("Stable Diffusion API error: " + e.getResponseBodyAsString(), e);
         } catch (Exception e) {
-            throw new RuntimeException("Error calling Claude API", e);
+            throw new RuntimeException("Error calling Stable Diffusion API", e);
         }
     }
 
     @Override
-    public String getProviderName() {
-        return "claude";
-    }
-
-    @Override
-    public boolean isAvailable() {
-        try {
-            // Simple health check
-            return webClient != null;
-        } catch (Exception e) {
-            return false;
-        }
-    }
-
-    @Override
-    public String[] getSupportedModels() {
-        return new String[]{
-            "claude-3-opus-20240229",
-            "claude-3-sonnet-20240229",
-            "claude-3-haiku-20240307"
-        };
-    }
-
     public AIGenerationResponse generateResponseWithDetails(String prompt, String model) {
         try {
-            String response = generateResponse(prompt);
+            String response = generateResponse(prompt, model);
             return new AIGenerationResponse(
                 response,
                 getProviderName(),
@@ -114,5 +94,30 @@ public class ClaudeService implements AIProviderService {
                 e.getMessage()
             );
         }
+    }
+
+    @Override
+    public String getProviderName() {
+        return "stable-diffusion";
+    }
+
+    @Override
+    public boolean isAvailable() {
+        try {
+            // Simple health check
+            return webClient != null;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    @Override
+    public String[] getSupportedModels() {
+        return new String[]{
+            "stable-diffusion-xl-1024-v1-0",
+            "stable-diffusion-v1-6",
+            "stable-diffusion-512-v2-1",
+            "stable-diffusion-768-v2-1"
+        };
     }
 }

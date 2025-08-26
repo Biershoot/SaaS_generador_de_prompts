@@ -32,11 +32,16 @@ public class OpenAIService implements AIProviderService {
 
     @Override
     public String generateResponse(String prompt) {
+        return generateResponse(prompt, defaultModel);
+    }
+
+    @Override
+    public String generateResponse(String prompt, String model) {
         try {
-            String model = defaultModel;
+            String modelToUse = model != null ? model : defaultModel;
             
             Map<String, Object> requestBody = Map.of(
-                "model", model,
+                "model", modelToUse,
                 "messages", new Object[]{
                     Map.of("role", "user", "content", prompt)
                 },
@@ -69,6 +74,27 @@ public class OpenAIService implements AIProviderService {
     @Override
     public String getProviderName() {
         return "openai";
+    }
+
+    @Override
+    public boolean isAvailable() {
+        try {
+            // Simple health check
+            return webClient != null;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    @Override
+    public String[] getSupportedModels() {
+        return new String[]{
+            "gpt-4o-mini",
+            "gpt-4o",
+            "gpt-4-turbo",
+            "gpt-3.5-turbo",
+            "text-davinci-003"
+        };
     }
 
     public AIGenerationResponse generateResponseWithDetails(String prompt, String model) {

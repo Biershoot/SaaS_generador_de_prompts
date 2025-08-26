@@ -8,6 +8,11 @@ public class MockAIService implements AIProviderService {
 
     @Override
     public String generateResponse(String prompt) {
+        return generateResponse(prompt, "mock-model");
+    }
+
+    @Override
+    public String generateResponse(String prompt, String model) {
         // Simulate API delay
         try {
             Thread.sleep(1000);
@@ -16,7 +21,7 @@ public class MockAIService implements AIProviderService {
         }
         
         return String.format("""
-            [MOCK AI RESPONSE]
+            [MOCK AI RESPONSE - Model: %s]
             
             Prompt: %s
             
@@ -29,12 +34,26 @@ public class MockAIService implements AIProviderService {
             - Creative suggestion 3
             
             [End of mock response]
-            """, prompt);
+            """, model, prompt);
     }
 
     @Override
     public String getProviderName() {
         return "mock";
+    }
+
+    @Override
+    public boolean isAvailable() {
+        return true; // Mock service is always available
+    }
+
+    @Override
+    public String[] getSupportedModels() {
+        return new String[]{
+            "mock-model",
+            "mock-gpt",
+            "mock-claude"
+        };
     }
 
     public AIGenerationResponse generateResponseWithDetails(String prompt, String model) {

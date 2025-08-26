@@ -44,6 +44,11 @@ public class AIController {
                     (com.alejandro.microservices.promptgeneratorsaas.service.MockAIService) service;
                 AIGenerationResponse response = mockService.generateResponseWithDetails(request.getPrompt(), request.getModel());
                 return ResponseEntity.ok(response);
+            } else if (service instanceof com.alejandro.microservices.promptgeneratorsaas.service.StableDiffusionService) {
+                com.alejandro.microservices.promptgeneratorsaas.service.StableDiffusionService stableDiffusionService = 
+                    (com.alejandro.microservices.promptgeneratorsaas.service.StableDiffusionService) service;
+                AIGenerationResponse response = stableDiffusionService.generateResponseWithDetails(request.getPrompt(), request.getModel());
+                return ResponseEntity.ok(response);
             } else {
                 // Fallback for simple response
                 String response = service.generateResponse(request.getPrompt());
