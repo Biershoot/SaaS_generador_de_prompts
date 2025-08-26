@@ -16,6 +16,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -26,6 +27,9 @@ class PaymentServiceTest {
 
     @Mock
     private SubscriptionRepository subscriptionRepository;
+
+    @Mock
+    private SubscriptionService subscriptionService;
 
     @InjectMocks
     private PaymentService paymentService;
@@ -90,8 +94,6 @@ class PaymentServiceTest {
 
         when(subscriptionRepository.findByStripeSubscriptionId("sub_test123"))
                 .thenReturn(Optional.of(subscription));
-        when(subscriptionRepository.save(any(Subscription.class)))
-                .thenReturn(subscription);
 
         // Should not throw any exception
         assertDoesNotThrow(() -> {
@@ -111,8 +113,6 @@ class PaymentServiceTest {
 
         when(subscriptionRepository.findByStripeSubscriptionId("sub_test123"))
                 .thenReturn(Optional.of(subscription));
-        when(subscriptionRepository.save(any(Subscription.class)))
-                .thenReturn(subscription);
 
         // Should not throw any exception
         assertDoesNotThrow(() -> {
