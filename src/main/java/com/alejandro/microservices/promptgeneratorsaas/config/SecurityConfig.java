@@ -32,6 +32,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/prompts/**").hasAnyRole("USER", "ADMIN")
                 .requestMatchers("/api/users/**").hasAnyRole("USER", "ADMIN")
+                .requestMatchers("/api/ai/**").hasAnyRole("USER", "ADMIN")
                 .anyRequest().authenticated()
             )
             .sessionManagement(session -> session
