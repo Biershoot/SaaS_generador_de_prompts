@@ -1,0 +1,32 @@
+# Development profile configuration
+spring:
+  jmx:
+    enabled: false
+    default-domain: prompt-generator-saas
+  
+  devtools:
+    restart:
+      enabled: true
+      additional-paths: src/main/java
+      exclude: static/**,public/**,templates/**
+    livereload:
+      enabled: true
+      port: 35729
+
+# Disable JMX completely for development
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+# Logging configuration for development
+logging:
+  level:
+    org.springframework.web: DEBUG
+    com.alejandro.microservices: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
