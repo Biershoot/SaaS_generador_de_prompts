@@ -45,17 +45,27 @@ public class SecurityConfig {
         http
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable()) // Disabled for API, but consider enabling for web forms
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/auth/**", "/actuator/health").permitAll()
-                .requestMatchers("/api/webhooks/**").permitAll() // Webhooks need to be public
-                .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                .requestMatchers("/api/prompts/**").hasAnyRole("USER", "ADMIN")
-                .requestMatchers("/api/users/**").hasAnyRole("USER", "ADMIN")
-                .requestMatchers("/api/ai/**").hasAnyRole("USER", "ADMIN")
-                .requestMatchers("/api/payments/**").hasAnyRole("USER", "ADMIN")
-                .requestMatchers("/api/subscriptions/**").hasAnyRole("USER", "ADMIN")
-                .anyRequest().authenticated()
-            )
+            .authorizeHttpRequests(auth -> {
+                // Public endpoints
+                auth.requestMatchers("/auth/**", "/actuator/health").permitAll();
+                auth.requestMatchers("/api/webhooks/**").permitAll(); // Webhooks need to be public
+
+                // Dev-only H2 Console access MUST be configured before anyRequest()
+                if ("dev".equals(activeProfile)) {
+                    auth.requestMatchers("/h2-console/**").permitAll();
+                }
+
+                // Protected API endpoints
+                auth.requestMatchers("/api/admin/**").hasRole("ADMIN");
+                auth.requestMatchers("/api/prompts/**").hasAnyRole("USER", "ADMIN");
+                auth.requestMatchers("/api/users/**").hasAnyRole("USER", "ADMIN");
+                auth.requestMatchers("/api/ai/**").hasAnyRole("USER", "ADMIN");
+                auth.requestMatchers("/api/payments/**").hasAnyRole("USER", "ADMIN");
+                auth.requestMatchers("/api/subscriptions/**").hasAnyRole("USER", "ADMIN");
+
+                // Any other request requires authentication
+                auth.anyRequest().authenticated();
+            })
             .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
@@ -71,11 +81,8 @@ public class SecurityConfig {
             )
         );
 
-        // Only allow H2 console in development
+        // Allow H2 console frames only in development
         if ("dev".equals(activeProfile)) {
-            http.authorizeHttpRequests(auth -> auth
-                .requestMatchers("/h2-console/**").permitAll()
-            );
             http.headers(headers -> headers.frameOptions(frameOptions -> frameOptions.disable()));
         }
 
