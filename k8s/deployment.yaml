@@ -1,0 +1,166 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prompt-app
+  namespace: prompt
+  labels:
+    app: prompt-app
+    version: v1
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: prompt-app
+  template:
+    metadata:
+      labels:
+        app: prompt-app
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/actuator/prometheus"
+    spec:
+      # Security context
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      
+      # Image pull policy
+      imagePullSecrets:
+        - name: ecr-registry-secret
+      
+      containers:
+        - name: prompt-app
+          image: <ECR_REGISTRY>/prompt-generator-saas:latest
+          imagePullPolicy: Always
+          
+          # Port configuration
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          
+          # Environment variables from ConfigMap
+          envFrom:
+            - configMapRef:
+                name: prompt-config
+          
+          # Environment variables from Secret
+          env:
+            - name: DATASOURCE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: prompt-secrets
+                  key: DATASOURCE_URL
+            - name: DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: prompt-secrets
+                  key: DATASOURCE_USERNAME
+            - name: DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: prompt-secrets
+                  key: DATASOURCE_PASSWORD
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: prompt-secrets
+                  key: JWT_SECRET
+            - name: STRIPE_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: prompt-secrets
+                  key: STRIPE_SECRET_KEY
+            - name: STRIPE_WEBHOOK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: prompt-secrets
+                  key: STRIPE_WEBHOOK_SECRET
+            - name: STRIPE_PUBLISHABLE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: prompt-secrets
+                  key: STRIPE_PUBLISHABLE_KEY
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: prompt-secrets
+                  key: OPENAI_API_KEY
+            - name: CLAUDE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: prompt-secrets
+                  key: CLAUDE_API_KEY
+            - name: STABLE_DIFFUSION_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: prompt-secrets
+                  key: STABLE_DIFFUSION_API_KEY
+          
+          # Resource limits and requests
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "500m"
+          
+          # Health checks
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+          
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          
+          # Volume mounts for logs
+          volumeMounts:
+            - name: logs-volume
+              mountPath: /app/logs
+          
+          # Security context for container
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+      
+      # Volumes
+      volumes:
+        - name: logs-volume
+          emptyDir: {}
+      
+      # Affinity for better pod distribution
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - prompt-app
+                topologyKey: kubernetes.io/hostname

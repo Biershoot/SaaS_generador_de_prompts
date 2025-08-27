@@ -1,0 +1,41 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prompt-config
+  namespace: prompt
+data:
+  # Application configuration
+  SPRING_PROFILES_ACTIVE: "prod"
+  
+  # Database configuration (non-sensitive)
+  SPRING_DATASOURCE_DRIVER_CLASS_NAME: "com.mysql.cj.jdbc.Driver"
+  
+  # JPA configuration
+  SPRING_JPA_HIBERNATE_DDL_AUTO: "validate"
+  SPRING_JPA_SHOW_SQL: "false"
+  
+  # Flyway configuration
+  SPRING_FLYWAY_ENABLED: "true"
+  SPRING_FLYWAY_LOCATIONS: "classpath:db/migration"
+  SPRING_FLYWAY_BASELINE_ON_MIGRATE: "true"
+  
+  # JWT configuration
+  JWT_EXPIRATION: "18000"
+  JWT_ISSUER: "prompt-generator-saas"
+  
+  # CORS configuration
+  APP_CORS_ALLOWED_ORIGINS: "https://your-frontend-domain.com"
+  
+  # AI Provider models
+  OPENAI_MODEL: "gpt-4o-mini"
+  CLAUDE_MODEL: "claude-3-opus-20240229"
+  STABLE_DIFFUSION_MODEL: "stable-diffusion-xl-1024-v1-0"
+  STABLE_DIFFUSION_API_URL: "https://api.stability.ai"
+  
+  # Logging configuration
+  LOGGING_LEVEL_COM_ALEJANDRO: "INFO"
+  LOGGING_LEVEL_ORG_SPRINGFRAMEWORK: "WARN"
+  LOGGING_LEVEL_COM_STRIPE: "WARN"
+  
+  # Server configuration
+  SERVER_PORT: "8080"
