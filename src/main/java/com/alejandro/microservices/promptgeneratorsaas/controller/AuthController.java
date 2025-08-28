@@ -22,9 +22,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.util.WebUtils;
 
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.util.Map;
 
 @RestController
@@ -96,10 +96,13 @@ public class AuthController {
 
         // Generate token for the new user
         final UserDetails userDetails = userDetailsService.loadUserByUsername(request.getUsername());
-        final String jwt = jwtUtil.generateToken(userDetails);
+        final String accessToken = jwtService.generateAccessToken(userDetails);
 
-        AuthResponse response = new AuthResponse(jwt, request.getUsername(), user.getRole().name());
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(Map.of(
+                "accessToken", accessToken,
+                "username", request.getUsername(),
+                "role", user.getRole().name()
+        ));
     }
 
     @PostMapping("/refresh")
