@@ -1,14 +1,11 @@
 package com.alejandro.microservices.promptgeneratorsaas.config;
 
 import com.alejandro.microservices.promptgeneratorsaas.security.JwtRequestFilter;
-import com.alejandro.microservices.promptgeneratorsaas.security.RateLimitFilter;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
-import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -16,100 +13,39 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-
-import java.util.Arrays;
-import java.util.List;
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
 
-    @Autowired
-    private JwtRequestFilter jwtRequestFilter;
-
-    @Autowired
-    private RateLimitFilter rateLimitFilter;
-
-    @Value("${app.cors.allowed-origins:http://localhost:3000}")
-    private String allowedOrigins;
-
-    @Value("${spring.profiles.active:dev}")
-    private String activeProfile;
+    private final JwtRequestFilter jwtRequestFilter;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .csrf(csrf -> csrf.disable()) // Disabled for API, but consider enabling for web forms
-            .authorizeHttpRequests(auth -> {
-                // Public endpoints
-                auth.requestMatchers("/auth/**", "/actuator/health").permitAll();
-                auth.requestMatchers("/api/webhooks/**").permitAll(); // Webhooks need to be public
-
-                // Dev-only H2 Console access MUST be configured before anyRequest()
-                if ("dev".equals(activeProfile)) {
-                    auth.requestMatchers("/h2-console/**").permitAll();
-                }
-
-                // Protected API endpoints
-                auth.requestMatchers("/api/admin/**").hasRole("ADMIN");
-                auth.requestMatchers("/api/prompts/**").hasAnyRole("USER", "ADMIN");
-                auth.requestMatchers("/api/users/**").hasAnyRole("USER", "ADMIN");
-                auth.requestMatchers("/api/ai/**").hasAnyRole("USER", "ADMIN");
-                auth.requestMatchers("/api/payments/**").hasAnyRole("USER", "ADMIN");
-                auth.requestMatchers("/api/subscriptions/**").hasAnyRole("USER", "ADMIN");
-
-                // Any other request requires authentication
-                auth.anyRequest().authenticated();
-            })
-            .sessionManagement(session -> session
+            .csrf().disable()
+            .authorizeHttpRequests()
+                .requestMatchers("/auth/**").permitAll()
+                .requestMatchers("/actuator/**").permitAll()
+                .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                .anyRequest().authenticated()
+            .and()
+                .sessionManagement()
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            )
-            .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
-            .addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
-
-        // Security headers
-        http.headers(headers -> headers
-            .frameOptions(frameOptions -> frameOptions.deny()) // Prevent clickjacking
-            .contentTypeOptions(contentTypeOptions -> {}) // Prevent MIME type sniffing
-            .httpStrictTransportSecurity(hsts -> hsts
-                .maxAgeInSeconds(31536000) // 1 year
-            )
-        );
-
-        // Allow H2 console frames only in development
-        if ("dev".equals(activeProfile)) {
-            http.headers(headers -> headers.frameOptions(frameOptions -> frameOptions.disable()));
-        }
+            .and()
+                .addFilterBefore(jwtRequestFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
     @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(Arrays.asList(allowedOrigins.split(",")));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("*"));
-        configuration.setAllowCredentials(true);
-        configuration.setMaxAge(3600L);
-
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
+        return authConfig.getAuthenticationManager();
     }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
-    }
-
-    @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
-        return authConfig.getAuthenticationManager();
     }
 }

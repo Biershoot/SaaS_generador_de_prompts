@@ -59,7 +59,10 @@ logging:
 # JWT Configuration
 jwt:
   secret: ${JWT_SECRET:your-super-secret-jwt-key-change-in-production}
-  expiration: 18000 # 5 hours in seconds
+  access:
+    expiration: 900 # 15 minutes in seconds
+  refresh:
+    expiration: 604800 # 7 days in seconds
   issuer: prompt-generator-saas
 
 # CORS Configuration
