@@ -14,13 +14,56 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/ai")
-@CrossOrigin(origins = "*")
 public class AIController {
 
     private final AIServiceFactory aiServiceFactory;
 
     public AIController(AIServiceFactory aiServiceFactory) {
         this.aiServiceFactory = aiServiceFactory;
+    }
+
+    @PostMapping("/test")
+    public ResponseEntity<?> testAI(@RequestBody AIGenerationRequest request) {
+        try {
+            AIProviderService service = aiServiceFactory.getProvider(request.getProvider());
+            
+            if (service instanceof com.alejandro.microservices.promptgeneratorsaas.service.OpenAIService) {
+                com.alejandro.microservices.promptgeneratorsaas.service.OpenAIService openAIService = 
+                    (com.alejandro.microservices.promptgeneratorsaas.service.OpenAIService) service;
+                AIGenerationResponse response = openAIService.generateResponseWithDetails(request.getPrompt(), request.getModel());
+                return ResponseEntity.ok(response);
+            } else if (service instanceof com.alejandro.microservices.promptgeneratorsaas.service.ClaudeService) {
+                com.alejandro.microservices.promptgeneratorsaas.service.ClaudeService claudeService = 
+                    (com.alejandro.microservices.promptgeneratorsaas.service.ClaudeService) service;
+                AIGenerationResponse response = claudeService.generateResponseWithDetails(request.getPrompt(), request.getModel());
+                return ResponseEntity.ok(response);
+            } else if (service instanceof com.alejandro.microservices.promptgeneratorsaas.service.MockAIService) {
+                com.alejandro.microservices.promptgeneratorsaas.service.MockAIService mockService = 
+                    (com.alejandro.microservices.promptgeneratorsaas.service.MockAIService) service;
+                AIGenerationResponse response = mockService.generateResponseWithDetails(request.getPrompt(), request.getModel());
+                return ResponseEntity.ok(response);
+            } else if (service instanceof com.alejandro.microservices.promptgeneratorsaas.service.StableDiffusionService) {
+                com.alejandro.microservices.promptgeneratorsaas.service.StableDiffusionService stableDiffusionService = 
+                    (com.alejandro.microservices.promptgeneratorsaas.service.StableDiffusionService) service;
+                AIGenerationResponse response = stableDiffusionService.generateResponseWithDetails(request.getPrompt(), request.getModel());
+                return ResponseEntity.ok(response);
+            } else {
+                // Fallback for simple response
+                String response = service.generateResponse(request.getPrompt());
+                return ResponseEntity.ok(new AIGenerationResponse(
+                    response,
+                    service.getProviderName(),
+                    request.getModel(),
+                    System.currentTimeMillis(),
+                    true,
+                    null
+                ));
+            }
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of("error", "Error generating AI response: " + e.getMessage()));
+        }
     }
 
     @PostMapping("/generate")
